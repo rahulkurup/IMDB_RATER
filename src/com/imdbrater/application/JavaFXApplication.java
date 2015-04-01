@@ -14,14 +14,18 @@ import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import javafx.application.Application;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
-import javafx.stage.Stage;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
@@ -29,75 +33,79 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
-import javafx.stage.DirectoryChooser;
 import javafx.scene.paint.Color;
+import javafx.stage.DirectoryChooser;
+import javafx.stage.Stage;
+
 import org.apache.commons.io.FilenameUtils;
 import org.codehaus.jackson.map.DeserializationConfig;
 import org.codehaus.jackson.map.ObjectMapper;
 
 public final class JavaFXApplication extends Application {
 
-    private final List<MovieInfo> movieInfoList = new ArrayList<>();
-    private List<String> yourMovieNameList = new ArrayList<>();
-    private final TableView<MovieInfo> table = new TableView<>();
+    private List<String> movieFileNameList = new ArrayList<String>();
+    private final TableView<MovieInfo> guiTable = new TableView<MovieInfo>();
     private final ObservableList<MovieInfo> tableData = FXCollections.observableArrayList();
-    //Video formats to be searched                
+    //Video formats to be searched
     private final String[] videoFormats = {"avi", "divx", "mkv", "mpg", "mp4",
-        "wmv", "bin", "ogm", "vob", "iso",
-        "img", "nts", "rmvb", "3gp",
-        "asf", "flv", "mov", "movx", "mpe",
-        "mpeg", "mpg", "mpv", "ogg", "ram",
-        "rm", "wm", "wmx", "x264", "xvid",
-        "dv"};
-    final Set<String> videoFormatSet = new HashSet<>(Arrays.asList(videoFormats));
+                                           "wmv", "bin", "ogm", "vob", "iso",
+                                           "img", "nts", "rmvb", "3gp",
+                                           "asf", "flv", "mov", "movx", "mpe",
+                                           "mpeg", "mpg", "mpv", "ogg", "ram",
+                                            "rm", "wm", "wmx", "x264", "xvid","dv"};
+    final Set<String> videoFormatSet = new HashSet<String>(Arrays.asList(videoFormats));
 
     //Constructor
     public JavaFXApplication() {
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public void start(final Stage stage) {
 
+        // stage properties
         stage.setTitle("Movie Rater");
         stage.setResizable(true);
-        stage.centerOnScreen();
+        stage.setMaximized(true);
 
-        //Table elements and its properties
-        final TableColumn FileNameCol = new TableColumn("File Name");
-        final TableColumn movieNameCol = new TableColumn("Movie Name");
-        final TableColumn imdbRatingCol = new TableColumn("IMDB Rating");
-        final TableColumn yearCol = new TableColumn("Year");
-        final TableColumn genreCol = new TableColumn("Genre");
-        final TableColumn languageCol = new TableColumn("Language");
+        // Table elements and its properties
+        final TableColumn<MovieInfo, String> FileNameCol = new TableColumn<MovieInfo, String>("File Name");
+        final TableColumn<MovieInfo, String> movieNameCol = new TableColumn<MovieInfo, String>("Movie Name");
+        final TableColumn<MovieInfo, String> imdbRatingCol = new TableColumn<MovieInfo, String>("IMDB Rating");
+        final TableColumn<MovieInfo, String> yearCol = new TableColumn<MovieInfo, String>("Year");
+        final TableColumn<MovieInfo, String> genreCol = new TableColumn<MovieInfo, String>("Genre");
+        final TableColumn<MovieInfo, String> languageCol = new TableColumn<MovieInfo, String>("Language");
 
-        FileNameCol.setCellValueFactory(new PropertyValueFactory<>("fileName"));
-        movieNameCol.setCellValueFactory(new PropertyValueFactory<>("title"));
-        imdbRatingCol.setCellValueFactory(new PropertyValueFactory<>("imdbRating"));
-        yearCol.setCellValueFactory(new PropertyValueFactory<>("year"));
-        genreCol.setCellValueFactory(new PropertyValueFactory<>("genre"));
-        languageCol.setCellValueFactory(new PropertyValueFactory<>("language"));
+        FileNameCol.setCellValueFactory(new PropertyValueFactory<MovieInfo, String>("fileName"));
+        movieNameCol.setCellValueFactory(new PropertyValueFactory<MovieInfo, String>("title"));
+        imdbRatingCol.setCellValueFactory(new PropertyValueFactory<MovieInfo, String>("imdbRating"));
+        yearCol.setCellValueFactory(new PropertyValueFactory<MovieInfo, String>("year"));
+        genreCol.setCellValueFactory(new PropertyValueFactory<MovieInfo, String>("genre"));
+        languageCol.setCellValueFactory(new PropertyValueFactory<MovieInfo, String>("language"));
+        // Adding columns to table
+        guiTable.getColumns().addAll(FileNameCol, movieNameCol, imdbRatingCol, yearCol,
+                                      genreCol, languageCol);
 
-        table.getColumns().addAll(FileNameCol, movieNameCol, imdbRatingCol, yearCol,
-                			      genreCol, languageCol);
-        
         final Button selectButton = new Button("Select Movie Folder");
         selectButton.setStyle("-fx-font: 13 arial; -fx-base: #b6e7c9;");
         final Button rateButton = new Button("Get the Rating");
         rateButton.setStyle("-fx-font: 13 arial; -fx-base: #b6e7c9;");
         rateButton.setDisable(true);
 
-        final GridPane inputGridPane = new GridPane();
+        //Creating a grid pane and adding two buttons to it
+        final GridPane guiGridPane = new GridPane();
         GridPane.setConstraints(selectButton, 0, 0);
         GridPane.setConstraints(rateButton, 1, 0);
-        inputGridPane.setHgap(25);
-        inputGridPane.setVgap(25);
-        inputGridPane.getChildren().addAll(selectButton, rateButton);
+        guiGridPane.setHgap(25);
+        guiGridPane.setVgap(25);
+        guiGridPane.getChildren().addAll(selectButton, rateButton);
 
+        // Create a pane (vBox) and add grid pane and table to it
         final Pane rootGroup = new VBox(25);
-        rootGroup.getChildren().addAll(inputGridPane, table);
+        rootGroup.getChildren().addAll(guiGridPane, guiTable);
         rootGroup.setPadding(new Insets(12, 12, 12, 12));
-        //stage.setFullScreen(true);
-        stage.setScene(new Scene(rootGroup, 700, 300, Color.LIGHTBLUE));
+        final Scene guiScene = new Scene(rootGroup, 800, 600, Color.LIGHTBLUE);
+        stage.setScene(guiScene);
         stage.show();
 
         //Set the select button action
@@ -107,18 +115,31 @@ public final class JavaFXApplication extends Application {
                 final DirectoryChooser directoryChooser = new DirectoryChooser();
                 directoryChooser.setTitle("Select Movie Folder");
                 final File folder = directoryChooser.showDialog(stage);
-                if (folder != null) {
-                    Thread getFilesThread = new Thread(new GetfilesThread(folder));
-                    getFilesThread.start();
-                    rateButton.setDisable(false);
-                    //TODO: Notify user if the file is not a folder
-                    //Handle case where it is a disk
+
+                // Chosen folder is invalid or it is disk (tool doesn't support disk)
+                String patternString = "^[A-Z]:\\";
+                // Create a Pattern object
+                Pattern pattern = Pattern.compile(patternString);
+                // Now create matcher object.
+                Matcher matcher = pattern.matcher(folder.getAbsolutePath());
+                //If the selected folder is a drive or selection is invalid
+                if(matcher.matches() || folder == null) {
+                    Alert alert = new Alert(AlertType.ERROR);
+                    alert.setTitle("Error Dialog");
+                    alert.setHeaderText("Invalid folder selection");
+                    alert.setContentText("There is something wrong with the selection of folder. Please select a valid folder."
+                                         + "/n Note: Disk drives are not suppported by the tool");
+                    alert.showAndWait();
+                    return;
                 }
-                //TODO Display that selected folder is not valid
+
+                Thread getFilesThread = new Thread(new GetfilesThread(folder));
+                getFilesThread.start();
+                rateButton.setDisable(false);
             }
         });
 
-        //set the rate button action        
+        //set the rate button action
         rateButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(final ActionEvent e) {
@@ -134,10 +155,10 @@ public final class JavaFXApplication extends Application {
         Application.launch(args);
     }
 
+
     class GetfilesThread extends Thread {
 
         File folder;
-
         public GetfilesThread(File folder) {
             this.folder = folder;
         }
@@ -146,23 +167,22 @@ public final class JavaFXApplication extends Application {
             getFileNames(folder);
         }
         //Get files from the user computer
-
         public void getFileNames(File folder) {
             for (final File file : folder.listFiles()) {
                 if (file.isDirectory()) {
                     getFileNames(file);
                 } else {
                     if (FilenameUtils.isExtension(file.getName().toLowerCase(), videoFormatSet)) {
-                        //Donot consider video files less than 100 mb
+                        //Don't consider video files less than 100 MB
                         final Long FileSizeInMB = file.length() / 1048576;
                         if (FileSizeInMB < 100) {
                             continue;
                         }
                         final String fileName = FilenameUtils.removeExtension(file.getName());
                         if (!movieNameFilter(fileName).isEmpty()) {
-                            yourMovieNameList.add(movieNameFilter(fileName));
+                            movieFileNameList.add(movieNameFilter(fileName));
                         } else {
-                            yourMovieNameList.add(fileName);
+                            movieFileNameList.add(fileName);
                         }
                     }
                 }
@@ -178,7 +198,7 @@ public final class JavaFXApplication extends Application {
 
         private void doRating() {
             //For each movie:
-            for (final String movieName : yourMovieNameList) {
+            for (final String movieName : movieFileNameList) {
 
                 final String apiurl = "http://www.omdbapi.com/";
 
@@ -186,7 +206,7 @@ public final class JavaFXApplication extends Application {
 
                 while (true) {
                     try {
-                        // Forming a complete url ready to send
+                        // Forming a complete URL ready to send
                         final String restURLLink = apiurl + "?t=" + tempMovieName + "&type=movie";
                         final URL url = new URL(restURLLink);
                         URLConnection omdbConnection = url.openConnection();
@@ -217,7 +237,7 @@ public final class JavaFXApplication extends Application {
 
         private void addDataToTable(final MovieInfo moviePojo) {
             tableData.add(moviePojo);
-            table.setItems(tableData);
+            guiTable.setItems(tableData);
         }
     }
 
