@@ -117,7 +117,7 @@ public final class JavaFXApplication extends Application {
                 final File folder = directoryChooser.showDialog(stage);
 
                 // Chosen folder is invalid or it is disk (tool doesn't support disk)
-                String patternString = "^[A-Z]:\\";
+                String patternString = "^([A-Z]):\\\\";
                 // Create a Pattern object
                 Pattern pattern = Pattern.compile(patternString);
                 // Now create matcher object.
@@ -128,7 +128,8 @@ public final class JavaFXApplication extends Application {
                     alert.setTitle("Error Dialog");
                     alert.setHeaderText("Invalid folder selection");
                     alert.setContentText("There is something wrong with the selection of folder. Please select a valid folder."
-                                         + "/n Note: Disk drives are not suppported by the tool");
+                                         +"\n"                    		
+                                         + "\nNote: Disk drives are not suppported by the tool");
                     alert.showAndWait();
                     return;
                 }
