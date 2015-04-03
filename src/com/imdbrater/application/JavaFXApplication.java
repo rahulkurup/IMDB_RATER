@@ -27,6 +27,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
+import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -40,6 +41,8 @@ import javafx.stage.Stage;
 import org.apache.commons.io.FilenameUtils;
 import org.codehaus.jackson.map.DeserializationConfig;
 import org.codehaus.jackson.map.ObjectMapper;
+
+import com.sun.org.apache.bcel.internal.Constants;
 
 public final class JavaFXApplication extends Application {
 
@@ -88,23 +91,31 @@ public final class JavaFXApplication extends Application {
 
         final Button selectButton = new Button("Select Movie Folder");
         selectButton.setStyle("-fx-font: 13 arial; -fx-base: #b6e7c9;");
+        selectButton.setPrefSize(200d, 50d);
+        selectButton.autosize();
         final Button rateButton = new Button("Get the Rating");
         rateButton.setStyle("-fx-font: 13 arial; -fx-base: #b6e7c9;");
+        rateButton.setPrefSize(200d,  50d);
+        rateButton.autosize();
         rateButton.setDisable(true);
-
-        //Creating a grid pane and adding two buttons to it
+        ProgressBar guiProgressBar = new ProgressBar(0.0);
+        guiProgressBar.setPrefSize(1000d, 50d);
+        guiProgressBar.autosize();
+        
+        //Creating a grid pane and adding two buttons & Progress bar to it
         final GridPane guiGridPane = new GridPane();
         GridPane.setConstraints(selectButton, 0, 0);
         GridPane.setConstraints(rateButton, 1, 0);
+        guiGridPane.add(guiProgressBar, 2 , 0);
         guiGridPane.setHgap(25);
         guiGridPane.setVgap(25);
         guiGridPane.getChildren().addAll(selectButton, rateButton);
-
+        
         // Create a pane (vBox) and add grid pane and table to it
         final Pane rootGroup = new VBox(25);
         rootGroup.getChildren().addAll(guiGridPane, guiTable);
         rootGroup.setPadding(new Insets(12, 12, 12, 12));
-        final Scene guiScene = new Scene(rootGroup, 800, 600, Color.LIGHTBLUE);
+        final Scene guiScene = new Scene(rootGroup, 1300, 600, Color.LIGHTBLUE);
         stage.setScene(guiScene);
         stage.show();
 
@@ -114,9 +125,10 @@ public final class JavaFXApplication extends Application {
             public void handle(final ActionEvent e) {
                 final DirectoryChooser directoryChooser = new DirectoryChooser();
                 directoryChooser.setTitle("Select Movie Folder");
-                final File folder = directoryChooser.showDialog(stage);
+                File folder = directoryChooser.showDialog(stage);
 
                 // Chosen folder is invalid or it is disk (tool doesn't support disk)
+                //TODO: Add disk check for Linux as well
                 String patternString = "^([A-Z]):\\\\";
                 // Create a Pattern object
                 Pattern pattern = Pattern.compile(patternString);
@@ -129,7 +141,7 @@ public final class JavaFXApplication extends Application {
                     alert.setHeaderText("Invalid folder selection");
                     alert.setContentText("There is something wrong with the selection of folder. Please select a valid folder."
                                          +"\n"                    		
-                                         + "\nNote: Disk drives are not suppported by the tool");
+                                         + "\nNote: Disk drives(Example: C:\\) are not suppported by the tool. Select a folder.");
                     alert.showAndWait();
                     return;
                 }
@@ -218,9 +230,7 @@ public final class JavaFXApplication extends Application {
                         mapper.configure(DeserializationConfig.Feature.FAIL_ON_UNKNOWN_PROPERTIES, false);
                         final MovieInfo moviePojo = mapper.readValue(dataInputStream, MovieInfo.class);
                         if (!moviePojo.getResponse().equals("False") || tempMovieName.length() < 5) {
-                            moviePojo.setFileName(movieName);
-                            //Add to table
-                            addDataToTable(moviePojo);
+                        	// We were unable to find a match. Skip this file.
                             break;
                         } else {
                             tempMovieName = tempMovieName.substring(0, tempMovieName.length() - 1);
@@ -258,13 +268,13 @@ public final class JavaFXApplication extends Application {
             fileName = fileName.replaceAll(extensions + ".*$", " ");
         }
 
-        //Replace all two or more continious spaces by single space
+        //Replace all two or more continuous spaces by single space
         fileName = fileName.replaceAll("\\s+", " ");
 
         //remove all spaces in front and back
         fileName = fileName.trim();
 
-        //convert to lowercase
+        //convert to lower case
         fileName = fileName.toLowerCase();
 
         //add + instead of spaces
