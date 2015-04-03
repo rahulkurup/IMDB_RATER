@@ -1,6 +1,6 @@
 package com.imdbrater.application;
 
-
+import java.awt.Label;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
@@ -41,8 +41,6 @@ import javafx.stage.Stage;
 import org.apache.commons.io.FilenameUtils;
 import org.codehaus.jackson.map.DeserializationConfig;
 import org.codehaus.jackson.map.ObjectMapper;
-
-import com.sun.org.apache.bcel.internal.Constants;
 
 public final class JavaFXApplication extends Application {
 
@@ -98,9 +96,10 @@ public final class JavaFXApplication extends Application {
         rateButton.setPrefSize(200d,  50d);
         rateButton.autosize();
         rateButton.setDisable(true);
-        ProgressBar guiProgressBar = new ProgressBar(0.0);
+        final ProgressBar guiProgressBar = new ProgressBar(0.0);
         guiProgressBar.setPrefSize(1000d, 50d);
         guiProgressBar.autosize();
+        guiProgressBar.setVisible(false);
         
         //Creating a grid pane and adding two buttons & Progress bar to it
         final GridPane guiGridPane = new GridPane();
@@ -128,7 +127,7 @@ public final class JavaFXApplication extends Application {
                 File folder = directoryChooser.showDialog(stage);
 
                 // Chosen folder is invalid or it is disk (tool doesn't support disk)
-                //TODO: Add disk check for Linux as well
+                // TODO: Add disk check for Linux as well
                 String patternString = "^([A-Z]):\\\\";
                 // Create a Pattern object
                 Pattern pattern = Pattern.compile(patternString);
@@ -156,9 +155,10 @@ public final class JavaFXApplication extends Application {
         rateButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(final ActionEvent e) {
-                Thread rateThread = new Thread(new RaterThread());
+                Thread rateThread = new Thread(new RaterThread(guiProgressBar));
                 rateThread.start();
                 rateButton.setDisable(true);
+                guiProgressBar.setVisible(true);
             }
         });
     }
@@ -172,6 +172,7 @@ public final class JavaFXApplication extends Application {
     class GetfilesThread extends Thread {
 
         File folder;
+
         public GetfilesThread(File folder) {
             this.folder = folder;
         }
@@ -179,6 +180,7 @@ public final class JavaFXApplication extends Application {
         public void run() {
             getFileNames(folder);
         }
+
         //Get files from the user computer
         public void getFileNames(File folder) {
             for (final File file : folder.listFiles()) {
@@ -204,17 +206,26 @@ public final class JavaFXApplication extends Application {
     }
 
     class RaterThread extends Thread {
+    	
+    	ProgressBar guiProgressBar;
 
-        public void run() {
+        public RaterThread(final ProgressBar guiProgressBar) {
+        	this.guiProgressBar = guiProgressBar;
+		}
+
+		public void run() {
             doRating();
         }
 
         private void doRating() {
+        	
+        	final float totalProgressCount = movieFileNameList.size();
+            float currentProgressCount = 0;
+            float progressCount;
+
             //For each movie:
             for (final String movieName : movieFileNameList) {
-
                 final String apiurl = "http://www.omdbapi.com/";
-
                 String tempMovieName = movieName;
 
                 while (true) {
@@ -230,7 +241,12 @@ public final class JavaFXApplication extends Application {
                         mapper.configure(DeserializationConfig.Feature.FAIL_ON_UNKNOWN_PROPERTIES, false);
                         final MovieInfo moviePojo = mapper.readValue(dataInputStream, MovieInfo.class);
                         if (!moviePojo.getResponse().equals("False") || tempMovieName.length() < 5) {
-                        	// We were unable to find a match. Skip this file.
+                            moviePojo.setFileName(movieName);
+                            //Add to table
+                            addDataToTable(moviePojo);
+                            currentProgressCount++;
+                            progressCount = currentProgressCount / totalProgressCount;
+                            guiProgressBar.setProgress(progressCount);                            
                             break;
                         } else {
                             tempMovieName = tempMovieName.substring(0, tempMovieName.length() - 1);
