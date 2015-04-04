@@ -1,6 +1,5 @@
 package com.imdbrater.application;
 
-import java.awt.Label;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
@@ -155,10 +154,10 @@ public final class JavaFXApplication extends Application {
         rateButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(final ActionEvent e) {
-                Thread rateThread = new Thread(new RaterThread(guiProgressBar));
-                rateThread.start();
                 rateButton.setDisable(true);
                 guiProgressBar.setVisible(true);
+                Thread rateThread = new Thread(new RaterThread(guiProgressBar));
+                rateThread.start();
             }
         });
     }
