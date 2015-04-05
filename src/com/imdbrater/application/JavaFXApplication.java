@@ -156,8 +156,10 @@ public final class JavaFXApplication extends Application {
             public void handle(final ActionEvent e) {
                 rateButton.setDisable(true);
                 guiProgressBar.setVisible(true);
-                Thread rateThread = new Thread(new RaterThread(guiProgressBar));
-                rateThread.start();
+                guiProgressBar.setProgress(0.05);
+                Alert guiAlert = new Alert(AlertType.ERROR);
+                Thread rateThread = new Thread(new RaterThread(guiProgressBar, guiAlert));
+                rateThread.start();                
             }
         });
     }
@@ -207,9 +209,11 @@ public final class JavaFXApplication extends Application {
     class RaterThread extends Thread {
     	
     	ProgressBar guiProgressBar;
+    	Alert guiAlert;
 
-        public RaterThread(final ProgressBar guiProgressBar) {
+        public RaterThread(final ProgressBar guiProgressBar, final Alert guiAlert) {
         	this.guiProgressBar = guiProgressBar;
+        	this.guiAlert = guiAlert;
 		}
 
 		public void run() {
@@ -233,8 +237,17 @@ public final class JavaFXApplication extends Application {
                         final String restURLLink = apiurl + "?t=" + tempMovieName + "&type=movie";
                         final URL url = new URL(restURLLink);
                         URLConnection omdbConnection = url.openConnection();
+                        
+                        // Check if there is anything wrong with Internet.
+                        if(omdbConnection.getContentLength() == -1){                   
+                        	guiAlert.setTitle("Error Dialog");
+                            guiAlert.setHeaderText("No Internet Connection");
+                            guiAlert.setContentText("There is something wrong with your Internet Conection."
+                                                 +"\n"                    		
+                                                 + "\nPlease check your internet connection and try rerunning the tool.");
+                            guiAlert.showAndWait();
+                      }                        
                         final DataInputStream dataInputStream = new DataInputStream(omdbConnection.getInputStream());
-
                         ObjectMapper mapper = new ObjectMapper();
                         mapper.setPropertyNamingStrategy(new MyNameStrategy());
                         mapper.configure(DeserializationConfig.Feature.FAIL_ON_UNKNOWN_PROPERTIES, false);
@@ -252,13 +265,14 @@ public final class JavaFXApplication extends Application {
                         }
                     } catch (MalformedURLException ex) {
                         Logger.getLogger(JavaFXApplication.class.getName()).log(Level.SEVERE, null, ex);
+                        break;
                     } catch (IOException ex) {
                         Logger.getLogger(JavaFXApplication.class.getName()).log(Level.SEVERE, null, ex);
+                        break;
                     }
                 }
-
             }
-
+            guiProgressBar.setProgress(1);
         }
 
         private void addDataToTable(final MovieInfo moviePojo) {
