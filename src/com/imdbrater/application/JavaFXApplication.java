@@ -48,11 +48,11 @@ public final class JavaFXApplication extends Application {
     private final ObservableList<MovieInfo> tableData = FXCollections.observableArrayList();
     //Video formats to be searched
     private final String[] videoFormats = {"avi", "divx", "mkv", "mpg", "mp4",
-                                           "wmv", "bin", "ogm", "vob", "iso",
-                                           "img", "nts", "rmvb", "3gp",
-                                           "asf", "flv", "mov", "movx", "mpe",
-                                           "mpeg", "mpg", "mpv", "ogg", "ram",
-                                            "rm", "wm", "wmx", "x264", "xvid","dv"};
+            "wmv", "bin", "ogm", "vob", "iso",
+            "img", "nts", "rmvb", "3gp",
+            "asf", "flv", "mov", "movx", "mpe",
+            "mpeg", "mpg", "mpv", "ogg", "ram",
+            "rm", "wm", "wmx", "x264", "xvid","dv"};
     final Set<String> videoFormatSet = new HashSet<String>(Arrays.asList(videoFormats));
 
     //Constructor
@@ -84,7 +84,7 @@ public final class JavaFXApplication extends Application {
         languageCol.setCellValueFactory(new PropertyValueFactory<MovieInfo, String>("language"));
         // Adding columns to table
         guiTable.getColumns().addAll(FileNameCol, movieNameCol, imdbRatingCol, yearCol,
-                                      genreCol, languageCol);
+                                     genreCol, languageCol);
 
         final Button selectButton = new Button("Select Movie Folder");
         selectButton.setStyle("-fx-font: 13 arial; -fx-base: #b6e7c9;");
@@ -99,7 +99,7 @@ public final class JavaFXApplication extends Application {
         guiProgressBar.setPrefSize(1000d, 50d);
         guiProgressBar.autosize();
         guiProgressBar.setVisible(false);
-        
+
         //Creating a grid pane and adding two buttons & Progress bar to it
         final GridPane guiGridPane = new GridPane();
         GridPane.setConstraints(selectButton, 0, 0);
@@ -108,7 +108,7 @@ public final class JavaFXApplication extends Application {
         guiGridPane.setHgap(25);
         guiGridPane.setVgap(25);
         guiGridPane.getChildren().addAll(selectButton, rateButton);
-        
+
         // Create a pane (vBox) and add grid pane and table to it
         final Pane rootGroup = new VBox(25);
         rootGroup.getChildren().addAll(guiGridPane, guiTable);
@@ -138,12 +138,11 @@ public final class JavaFXApplication extends Application {
                     alert.setTitle("Error Dialog");
                     alert.setHeaderText("Invalid folder selection");
                     alert.setContentText("There is something wrong with the selection of folder. Please select a valid folder."
-                                         +"\n"                    		
-                                         + "\nNote: Disk drives(Example: C:\\) are not suppported by the tool. Select a folder.");
+                            +"\n"
+                            + "\nNote: Disk drives(Example: C:\\) are not suppported by the tool. Select a folder.");
                     alert.showAndWait();
                     return;
                 }
-
                 Thread getFilesThread = new Thread(new GetfilesThread(folder));
                 getFilesThread.start();
                 rateButton.setDisable(false);
@@ -159,7 +158,7 @@ public final class JavaFXApplication extends Application {
                 guiProgressBar.setProgress(0.05);
                 Alert guiAlert = new Alert(AlertType.ERROR);
                 Thread rateThread = new Thread(new RaterThread(guiProgressBar, guiAlert));
-                rateThread.start();                
+                rateThread.start();
             }
         });
     }
@@ -207,22 +206,22 @@ public final class JavaFXApplication extends Application {
     }
 
     class RaterThread extends Thread {
-    	
-    	ProgressBar guiProgressBar;
-    	Alert guiAlert;
+
+        ProgressBar guiProgressBar;
+        Alert guiAlert;
 
         public RaterThread(final ProgressBar guiProgressBar, final Alert guiAlert) {
-        	this.guiProgressBar = guiProgressBar;
-        	this.guiAlert = guiAlert;
-		}
+            this.guiProgressBar = guiProgressBar;
+            this.guiAlert = guiAlert;
+        }
 
-		public void run() {
+        public void run() {
             doRating();
         }
 
         private void doRating() {
-        	
-        	final float totalProgressCount = movieFileNameList.size();
+
+            final float totalProgressCount = movieFileNameList.size();
             float currentProgressCount = 0;
             float progressCount;
 
@@ -237,16 +236,16 @@ public final class JavaFXApplication extends Application {
                         final String restURLLink = apiurl + "?t=" + tempMovieName + "&type=movie";
                         final URL url = new URL(restURLLink);
                         URLConnection omdbConnection = url.openConnection();
-                        
+
                         // Check if there is anything wrong with Internet.
-                        if(omdbConnection.getContentLength() == -1){                   
-                        	guiAlert.setTitle("Error Dialog");
+                        if(omdbConnection.getContentLength() == -1) {
+                            guiAlert.setTitle("Error Dialog");
                             guiAlert.setHeaderText("No Internet Connection");
                             guiAlert.setContentText("There is something wrong with your Internet Conection."
-                                                 +"\n"                    		
-                                                 + "\nPlease check your internet connection and try rerunning the tool.");
+                                    +"\n"                    		
+                                    + "\nPlease check your internet connection and try rerunning the tool.");
                             guiAlert.showAndWait();
-                      }                        
+                        }
                         final DataInputStream dataInputStream = new DataInputStream(omdbConnection.getInputStream());
                         ObjectMapper mapper = new ObjectMapper();
                         mapper.setPropertyNamingStrategy(new MyNameStrategy());
@@ -258,7 +257,7 @@ public final class JavaFXApplication extends Application {
                             addDataToTable(moviePojo);
                             currentProgressCount++;
                             progressCount = currentProgressCount / totalProgressCount;
-                            guiProgressBar.setProgress(progressCount);                            
+                            guiProgressBar.setProgress(progressCount);
                             break;
                         } else {
                             tempMovieName = tempMovieName.substring(0, tempMovieName.length() - 1);
