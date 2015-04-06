@@ -84,7 +84,7 @@ public final class JavaFXApplication extends Application {
         languageCol.setCellValueFactory(new PropertyValueFactory<MovieInfo, String>("language"));
         // Adding columns to table
         guiTable.getColumns().addAll(FileNameCol, movieNameCol, imdbRatingCol, yearCol,
-                                     genreCol, languageCol);
+                genreCol, languageCol);
 
         final Button selectButton = new Button("Select Movie Folder");
         selectButton.setStyle("-fx-font: 13 arial; -fx-base: #b6e7c9;");
@@ -242,9 +242,10 @@ public final class JavaFXApplication extends Application {
                             guiAlert.setTitle("Error Dialog");
                             guiAlert.setHeaderText("No Internet Connection");
                             guiAlert.setContentText("There is something wrong with your Internet Conection."
-                                    +"\n"                    		
+                                    +"\n"
                                     + "\nPlease check your internet connection and try rerunning the tool.");
                             guiAlert.showAndWait();
+                            return;
                         }
                         final DataInputStream dataInputStream = new DataInputStream(omdbConnection.getInputStream());
                         ObjectMapper mapper = new ObjectMapper();
