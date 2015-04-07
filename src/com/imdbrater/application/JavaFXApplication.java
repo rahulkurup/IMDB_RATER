@@ -6,9 +6,11 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -233,7 +235,6 @@ public final class JavaFXApplication extends Application {
                 final String OrginalmovieName = fileEntry.getKey();
                 final String parsedMovieName = fileEntry.getValue();
                 String tempMovieName = parsedMovieName;
-
                 while (true) {
                     try {
                         // Forming a complete URL ready to send
