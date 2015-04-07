@@ -8,8 +8,11 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -41,9 +44,11 @@ import org.apache.commons.io.FilenameUtils;
 import org.codehaus.jackson.map.DeserializationConfig;
 import org.codehaus.jackson.map.ObjectMapper;
 
+
 public final class JavaFXApplication extends Application {
 
-    private List<String> movieFileNameList = new ArrayList<String>();
+    private final Map<String, String> movieFileNameOrginalToParsedMap = new HashMap<String, String>();
+    //private final List<String> failedToProcessFileList = new ArrayList<String>();
     private final TableView<MovieInfo> guiTable = new TableView<MovieInfo>();
     private final ObservableList<MovieInfo> tableData = FXCollections.observableArrayList();
     //Video formats to be searched
@@ -84,7 +89,7 @@ public final class JavaFXApplication extends Application {
         languageCol.setCellValueFactory(new PropertyValueFactory<MovieInfo, String>("language"));
         // Adding columns to table
         guiTable.getColumns().addAll(FileNameCol, movieNameCol, imdbRatingCol, yearCol,
-                genreCol, languageCol);
+                                     genreCol, languageCol);
 
         final Button selectButton = new Button("Select Movie Folder");
         selectButton.setStyle("-fx-font: 13 arial; -fx-base: #b6e7c9;");
@@ -155,7 +160,6 @@ public final class JavaFXApplication extends Application {
             public void handle(final ActionEvent e) {
                 rateButton.setDisable(true);
                 guiProgressBar.setVisible(true);
-                guiProgressBar.setProgress(0.05);
                 Alert guiAlert = new Alert(AlertType.ERROR);
                 Thread rateThread = new Thread(new RaterThread(guiProgressBar, guiAlert));
                 rateThread.start();
@@ -195,9 +199,9 @@ public final class JavaFXApplication extends Application {
                         }
                         final String fileName = FilenameUtils.removeExtension(file.getName());
                         if (!movieNameFilter(fileName).isEmpty()) {
-                            movieFileNameList.add(movieNameFilter(fileName));
+                            movieFileNameOrginalToParsedMap.put(fileName, movieNameFilter(fileName));
                         } else {
-                            movieFileNameList.add(fileName);
+                            movieFileNameOrginalToParsedMap.put(fileName, fileName);
                         }
                     }
                 }
@@ -221,15 +225,16 @@ public final class JavaFXApplication extends Application {
 
         private void doRating() {
 
-            final float totalProgressCount = movieFileNameList.size();
+            final float totalProgressCount = movieFileNameOrginalToParsedMap.size();
             float currentProgressCount = 0;
-            float progressCount;
+            float progressCounter;
 
             //For each movie:
-            for (final String movieName : movieFileNameList) {
+            for (final Entry<String, String> fileEntry : movieFileNameOrginalToParsedMap.entrySet()) {
                 final String apiurl = "http://www.omdbapi.com/";
-                String tempMovieName = movieName;
-
+                final String OrginalmovieName = fileEntry.getKey();
+                final String parsedMovieName = fileEntry.getValue();
+                String tempMovieName = parsedMovieName;
                 while (true) {
                     try {
                         // Forming a complete URL ready to send
@@ -242,7 +247,7 @@ public final class JavaFXApplication extends Application {
                             guiAlert.setTitle("Error Dialog");
                             guiAlert.setHeaderText("No Internet Connection");
                             guiAlert.setContentText("There is something wrong with your Internet Conection."
-                                    +"\n"
+                                    +"\n"                    		
                                     + "\nPlease check your internet connection and try rerunning the tool.");
                             guiAlert.showAndWait();
                             return;
@@ -252,13 +257,13 @@ public final class JavaFXApplication extends Application {
                         mapper.setPropertyNamingStrategy(new MyNameStrategy());
                         mapper.configure(DeserializationConfig.Feature.FAIL_ON_UNKNOWN_PROPERTIES, false);
                         final MovieInfo moviePojo = mapper.readValue(dataInputStream, MovieInfo.class);
-                        if (!moviePojo.getResponse().equals("False") || tempMovieName.length() < 5) {
-                            moviePojo.setFileName(movieName);
+                        if (!moviePojo.getResponse().equals("False") && tempMovieName.length() < 5) {
+                            moviePojo.setFileName(OrginalmovieName);
                             //Add to table
                             addDataToTable(moviePojo);
                             currentProgressCount++;
-                            progressCount = currentProgressCount / totalProgressCount;
-                            guiProgressBar.setProgress(progressCount);
+                            progressCounter = currentProgressCount / totalProgressCount;
+                            guiProgressBar.setProgress(progressCounter);
                             break;
                         } else {
                             tempMovieName = tempMovieName.substring(0, tempMovieName.length() - 1);
