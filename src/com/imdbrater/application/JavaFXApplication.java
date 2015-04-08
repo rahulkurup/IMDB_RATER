@@ -8,8 +8,11 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -26,6 +29,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
@@ -43,7 +47,8 @@ import org.codehaus.jackson.map.ObjectMapper;
 
 public final class JavaFXApplication extends Application {
 
-    private List<String> movieFileNameList = new ArrayList<String>();
+    private Map<String, String> movieOrginalToParsedFileNameMap = new HashMap<String, String>();
+    private List<String> failedFileNameList = new ArrayList<String>();
     private final TableView<MovieInfo> guiTable = new TableView<MovieInfo>();
     private final ObservableList<MovieInfo> tableData = FXCollections.observableArrayList();
     //Video formats to be searched
@@ -96,15 +101,20 @@ public final class JavaFXApplication extends Application {
         rateButton.autosize();
         rateButton.setDisable(true);
         final ProgressBar guiProgressBar = new ProgressBar(0.0);
-        guiProgressBar.setPrefSize(1000d, 50d);
+        guiProgressBar.setPrefSize(800d, 30d);
         guiProgressBar.autosize();
         guiProgressBar.setVisible(false);
+        final Label guiProgressLabel = new Label("In Progress:");
+        guiProgressLabel.setTextFill(Color.BLUE);
+        guiProgressLabel.setVisible(false);
+
 
         //Creating a grid pane and adding two buttons & Progress bar to it
         final GridPane guiGridPane = new GridPane();
         GridPane.setConstraints(selectButton, 0, 0);
         GridPane.setConstraints(rateButton, 1, 0);
-        guiGridPane.add(guiProgressBar, 2 , 0);
+        guiGridPane.add(guiProgressLabel, 2 , 0);
+        guiGridPane.add(guiProgressBar, 3 , 0);
         guiGridPane.setHgap(25);
         guiGridPane.setVgap(25);
         guiGridPane.getChildren().addAll(selectButton, rateButton);
@@ -154,10 +164,11 @@ public final class JavaFXApplication extends Application {
             @Override
             public void handle(final ActionEvent e) {
                 rateButton.setDisable(true);
+                guiProgressLabel.setVisible(true);
                 guiProgressBar.setVisible(true);
-                guiProgressBar.setProgress(0.05);
+                guiProgressBar.setProgress(0.0001);
                 Alert guiAlert = new Alert(AlertType.ERROR);
-                Thread rateThread = new Thread(new RaterThread(guiProgressBar, guiAlert));
+                Thread rateThread = new Thread(new RaterThread(guiProgressBar, guiAlert, guiProgressLabel));
                 rateThread.start();
             }
         });
@@ -195,9 +206,9 @@ public final class JavaFXApplication extends Application {
                         }
                         final String fileName = FilenameUtils.removeExtension(file.getName());
                         if (!movieNameFilter(fileName).isEmpty()) {
-                            movieFileNameList.add(movieNameFilter(fileName));
+                            movieOrginalToParsedFileNameMap.put(fileName, movieNameFilter(fileName));
                         } else {
-                            movieFileNameList.add(fileName);
+                            movieOrginalToParsedFileNameMap.put(fileName,fileName);
                         }
                     }
                 }
@@ -207,12 +218,14 @@ public final class JavaFXApplication extends Application {
 
     class RaterThread extends Thread {
 
-        ProgressBar guiProgressBar;
-        Alert guiAlert;
+        final ProgressBar guiProgressBar;
+        final Alert guiAlert;
+        final Label guiProgressLabel;
 
-        public RaterThread(final ProgressBar guiProgressBar, final Alert guiAlert) {
+        public RaterThread(final ProgressBar guiProgressBar, final Alert guiAlert, final Label guiProgressLabel) {
             this.guiProgressBar = guiProgressBar;
             this.guiAlert = guiAlert;
+            this.guiProgressLabel = guiProgressLabel;
         }
 
         public void run() {
@@ -221,14 +234,15 @@ public final class JavaFXApplication extends Application {
 
         private void doRating() {
 
-            final float totalProgressCount = movieFileNameList.size();
+            final float totalProgressCount = movieOrginalToParsedFileNameMap.size();
             float currentProgressCount = 0;
             float progressCount;
 
             //For each movie:
-            for (final String movieName : movieFileNameList) {
+            for (final Entry<String, String> movieNameEntry : movieOrginalToParsedFileNameMap.entrySet()) {
                 final String apiurl = "http://www.omdbapi.com/";
-                String tempMovieName = movieName;
+                final String orginalFileName = movieNameEntry.getKey();
+                String tempMovieName = movieNameEntry.getValue();
 
                 while (true) {
                     try {
@@ -252,10 +266,17 @@ public final class JavaFXApplication extends Application {
                         mapper.setPropertyNamingStrategy(new MyNameStrategy());
                         mapper.configure(DeserializationConfig.Feature.FAIL_ON_UNKNOWN_PROPERTIES, false);
                         final MovieInfo moviePojo = mapper.readValue(dataInputStream, MovieInfo.class);
-                        if (!moviePojo.getResponse().equals("False") || tempMovieName.length() < 5) {
-                            moviePojo.setFileName(movieName);
+                        if (moviePojo.getResponse().equals("True")) {
+                            moviePojo.setFileName(orginalFileName);
                             //Add to table
                             addDataToTable(moviePojo);
+                            currentProgressCount++;
+                            progressCount = currentProgressCount / totalProgressCount;
+                            guiProgressBar.setProgress(progressCount);
+                            break;
+                        }
+                        else if (moviePojo.getResponse().equals("False") && tempMovieName.length() < 5) {
+                            failedFileNameList.add(orginalFileName);
                             currentProgressCount++;
                             progressCount = currentProgressCount / totalProgressCount;
                             guiProgressBar.setProgress(progressCount);
@@ -265,14 +286,23 @@ public final class JavaFXApplication extends Application {
                         }
                     } catch (MalformedURLException ex) {
                         Logger.getLogger(JavaFXApplication.class.getName()).log(Level.SEVERE, null, ex);
+                        failedFileNameList.add(orginalFileName);
+                        currentProgressCount++;
+                        progressCount = currentProgressCount / totalProgressCount;
+                        guiProgressBar.setProgress(progressCount);
                         break;
                     } catch (IOException ex) {
                         Logger.getLogger(JavaFXApplication.class.getName()).log(Level.SEVERE, null, ex);
+                        failedFileNameList.add(orginalFileName);
+                        currentProgressCount++;
+                        progressCount = currentProgressCount / totalProgressCount;
+                        guiProgressBar.setProgress(progressCount);
                         break;
                     }
                 }
             }
             guiProgressBar.setProgress(1);
+            guiProgressLabel.setText("Finished");
         }
 
         private void addDataToTable(final MovieInfo moviePojo) {
