@@ -20,7 +20,7 @@ public class MovieInfo {
     private String type;
     private String writer;
     private String year;
-    private String imdbID;
+    private String imdbId;
     private String imdbRating;
     private String imdbVotes;
     private String error;
@@ -161,12 +161,12 @@ public class MovieInfo {
         this.year = year;
     }
 
-    public String getImdbID() {
-        return this.imdbID;
+    public String getImdbId() {
+        return this.imdbId;
     }
 
-    public void setImdbID(String imdbID) {
-        this.imdbID = imdbID;
+    public void setImdbId(String imdbID) {
+        this.imdbId = imdbID;
     }
 
     public String getImdbRating() {

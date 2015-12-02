@@ -1,11 +1,14 @@
 package javafxapplication;
 
+import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -31,6 +34,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
 
+import org.apache.commons.io.FilenameUtils;
 import org.codehaus.jackson.map.DeserializationConfig;
 import org.codehaus.jackson.map.ObjectMapper;
 
@@ -63,6 +67,7 @@ public final class JavaFXApplication extends Application {
         final TableColumn FileNameCol = new TableColumn("File Name");
         final TableColumn movieNameCol = new TableColumn("Movie Name");
         final TableColumn imdbRatingCol = new TableColumn("IMDB Rating");
+        final TableColumn imdbVotes = new TableColumn("IMDB Votes");
         final TableColumn yearCol = new TableColumn("Year");
         final TableColumn genreCol = new TableColumn("Genre");
         final TableColumn languageCol = new TableColumn("Language");
@@ -73,10 +78,11 @@ public final class JavaFXApplication extends Application {
         yearCol.setCellValueFactory(new PropertyValueFactory<>("year"));
         genreCol.setCellValueFactory(new PropertyValueFactory<>("genre"));
         languageCol.setCellValueFactory(new PropertyValueFactory<>("language"));
+        imdbVotes.setCellValueFactory(new PropertyValueFactory<>("imdbVotes"));
 
 
 
-        table.getColumns().addAll(FileNameCol, movieNameCol, imdbRatingCol, yearCol,
+        table.getColumns().addAll(FileNameCol, movieNameCol, imdbRatingCol, imdbVotes, yearCol,
                 genreCol, languageCol);
 
         final Button selectButton = new Button("Select your Movie Folder");
@@ -166,11 +172,22 @@ public final class JavaFXApplication extends Application {
                     final URL url = new URL(restURLLink);
                     URLConnection omdbConnection = url.openConnection();
                     final DataInputStream dataInputStream = new DataInputStream(omdbConnection.getInputStream());
-
+                    BufferedReader rd = new BufferedReader(new InputStreamReader(dataInputStream, Charset.forName("UTF-8")));
+                    StringBuffer jsonString = new StringBuffer();
+                    String line = rd.readLine();
+                    while(line != null) {
+                    	jsonString.append(line);
+                    	line = rd.readLine();
+                    }
+                    System.out.println(jsonString.toString());
+                    String jsonfromURL = jsonString.toString();
+                    jsonfromURL = jsonfromURL.replace("imdbRating", "ImdbRating");
+                    jsonfromURL = jsonfromURL.replace("imdbVotes", "ImdbVotes");
+                    jsonfromURL = jsonfromURL.replace("imdbID", "ImdbId");
                     ObjectMapper mapper = new ObjectMapper();
                     mapper.setPropertyNamingStrategy(new MyNameStrategy());
                     mapper.configure(DeserializationConfig.Feature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-                    final MovieInfo moviePojo = mapper.readValue(dataInputStream, MovieInfo.class);
+                    final MovieInfo moviePojo = mapper.readValue(jsonfromURL, MovieInfo.class);
                     if (!moviePojo.getResponse().equals("False") || tempMovieName.length() < 5) {
                         moviePojo.setFileName(movieName);
                         return moviePojo;
